@@ -47,8 +47,9 @@ class LiteLLMProvider(LLMProvider):
                 os.environ.setdefault("ANTHROPIC_API_KEY", api_key)
             elif "openai" in default_model or "gpt" in default_model:
                 os.environ.setdefault("OPENAI_API_KEY", api_key)
-            elif "gemini" in default_model.lower():
-                os.environ.setdefault("GEMINI_API_KEY", api_key)
+            elif "gemini" in default_model.lower() or "google" in default_model.lower():
+                # Explicitly set GEMINI_API_KEY for google/gemini models
+                os.environ["GEMINI_API_KEY"] = api_key
             elif "zhipu" in default_model or "glm" in default_model or "zai" in default_model:
                 os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
         
@@ -65,6 +66,7 @@ class LiteLLMProvider(LLMProvider):
         model: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.7,
+        max_retries: int = 3,  # Added parameter
     ) -> LLMResponse:
         """
         Send a chat completion request via LiteLLM.
@@ -100,8 +102,12 @@ class LiteLLMProvider(LLMProvider):
             model = f"hosted_vllm/{model}"
         
         # For Gemini, ensure gemini/ prefix if not already present
-        if "gemini" in model.lower() and not model.startswith("gemini/"):
-            model = f"gemini/{model}"
+        if "gemini" in model.lower():
+            if model.startswith("google/"):
+                # Convert google/gemini... to gemini/gemini... for LiteLLM
+                model = model.replace("google/", "gemini/")
+            elif not model.startswith("gemini/"):
+                model = f"gemini/{model}"
         
         kwargs: dict[str, Any] = {
             "model": model,
@@ -118,15 +124,55 @@ class LiteLLMProvider(LLMProvider):
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
         
-        try:
-            response = await acompletion(**kwargs)
-            return self._parse_response(response)
-        except Exception as e:
-            # Return error as content for graceful handling
-            return LLMResponse(
-                content=f"Error calling LLM: {str(e)}",
-                finish_reason="error",
-            )
+        # Retry logic for temporary errors (503, 429, etc.)
+        retry_delay = 2.0  # seconds
+        
+        # Ensure at least 1 attempt
+        attempts = max(1, max_retries + 1)
+        
+        from loguru import logger
+        import time
+        
+        # Log request details
+        msg_count = len(messages)
+        total_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        logger.info(f"LLM Request: model={model}, messages={msg_count}, chars={total_chars}, tools={len(tools) if tools else 0}")
+        
+        for attempt in range(attempts):
+            try:
+                start_time = time.time()
+                logger.debug(f"Calling acompletion (attempt {attempt + 1})...")
+                
+                response = await acompletion(**kwargs)
+                
+                elapsed = time.time() - start_time
+                logger.info(f"LLM Response: {elapsed:.1f}s, finish_reason={response.choices[0].finish_reason}")
+                
+                return self._parse_response(response)
+            except Exception as e:
+                elapsed = time.time() - start_time
+                error_str = str(e).lower()
+                
+                logger.warning(f"LLM Error after {elapsed:.1f}s: {type(e).__name__}: {str(e)[:200]}")
+                
+                # Check if it's a retryable error (503, 429, timeout, overload)
+                is_retryable = any(x in error_str for x in [
+                    "503", "429", "overloaded", "timeout", "unavailable", "rate limit"
+                ])
+                
+                # If not retryable or last attempt, return error
+                if not is_retryable or attempt == attempts - 1:
+                    logger.error(f"LLM call failed after {attempt + 1} attempts: {e}")
+                    return LLMResponse(
+                        content=f"Error calling LLM: {str(e)}",
+                        finish_reason="error",
+                    )
+                
+                # Wait before retry with exponential backoff
+                import asyncio
+                wait_time = retry_delay * (2 ** attempt)
+                logger.warning(f"Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
     
     def _parse_response(self, response: Any) -> LLMResponse:
         """Parse LiteLLM response into our standard format."""

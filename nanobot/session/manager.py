@@ -36,12 +36,13 @@ class Session:
         self.messages.append(msg)
         self.updated_at = datetime.now()
     
-    def get_history(self, max_messages: int = 50) -> list[dict[str, Any]]:
+    def get_history(self, max_messages: int = 15, max_chars: int = 9000) -> list[dict[str, Any]]:
         """
         Get message history for LLM context.
         
         Args:
             max_messages: Maximum messages to return.
+            max_chars: Maximum total characters in history.
         
         Returns:
             List of messages in LLM format.
@@ -50,12 +51,27 @@ class Session:
         recent = self.messages[-max_messages:] if len(self.messages) > max_messages else self.messages
         
         # Convert to LLM format (just role and content)
-        return [{"role": m["role"], "content": m["content"]} for m in recent]
+        result = [{"role": m["role"], "content": m["content"]} for m in recent]
+        
+        # Trim by character limit (from oldest to newest)
+        total_chars = sum(len(m["content"]) for m in result)
+        while total_chars > max_chars and len(result) > 2:
+            removed = result.pop(0)
+            total_chars -= len(removed["content"])
+        
+        return result
     
     def clear(self) -> None:
         """Clear all messages in the session."""
         self.messages = []
         self.updated_at = datetime.now()
+    
+    def clear_history(self) -> int:
+        """Clear all messages and return count of cleared messages."""
+        count = len(self.messages)
+        self.messages = []
+        self.updated_at = datetime.now()
+        return count
 
 
 class SessionManager:
@@ -69,6 +85,11 @@ class SessionManager:
         self.workspace = workspace
         self.sessions_dir = ensure_dir(Path.home() / ".nanobot" / "sessions")
         self._cache: dict[str, Session] = {}
+    
+    @property
+    def sessions(self) -> dict[str, Session]:
+        """Access to cached sessions for tools."""
+        return self._cache
     
     def _get_session_path(self, key: str) -> Path:
         """Get the file path for a session."""

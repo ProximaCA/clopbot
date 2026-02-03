@@ -29,6 +29,10 @@ dependencies = [
     "rich>=13.0.0",
     "croniter>=2.0.0",
     "python-telegram-bot>=21.0",
+    "edge-tts>=6.1.9",
+    "telethon>=1.30.0",
+    "youtube-transcript-api>=0.6.0",
+    "pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]

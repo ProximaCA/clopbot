@@ -1,367 +1,203 @@
-<div align="center">
-  <img src="nanobot_logo.png" alt="nanobot" width="500">
-  <h1>nanobot: Ultra-Lightweight Personal AI Assistant</h1>
-  <p>
-    <a href="https://pypi.org/project/nanobot-ai/"><img src="https://img.shields.io/pypi/v/nanobot-ai" alt="PyPI"></a>
-    <a href="https://pepy.tech/project/nanobot-ai"><img src="https://static.pepy.tech/badge/nanobot-ai" alt="Downloads"></a>
-    <img src="https://img.shields.io/badge/python-≥3.11-blue" alt="Python">
-    <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-    <a href="./COMMUNICATION.md"><img src="https://img.shields.io/badge/Feishu-Group-E9DBFC?style=flat&logo=feishu&logoColor=white" alt="Feishu"></a>
-    <a href="./COMMUNICATION.md"><img src="https://img.shields.io/badge/WeChat-Group-C5EAB4?style=flat&logo=wechat&logoColor=white" alt="WeChat"></a>
-  </p>
-</div>
+# 🐛 Clopbot
 
-🐈 **nanobot** is an **ultra-lightweight** personal AI assistant inspired by [Clawdbot](https://github.com/openclaw/openclaw) 
+**Clopbot** — форк [nanobot](https://github.com/HKUDS/nanobot): персональный AI-ассистент в Telegram с голосом, поиском, напоминаниями и поддержкой каналов.
 
-⚡️ Delivers core agent functionality in just **~4,000** lines of code — **99% smaller** than Clawdbot's 430k+ lines.
+---
 
-## 📢 News
+## Что это
 
-- **2025-02-01** 🎉 nanobot launched! Welcome to try 🐈 nanobot!
+- Основа: **nanobot** (лёгкий агент на LLM + инструменты).
+- Бренд и поведение: **Clopbot** — бот для личных и групповых чатов, каналов, с русским языком и своим стилем.
 
-## Key Features of nanobot:
+Поддерживаются **Gemini** (рекомендуется), OpenRouter, Anthropic, OpenAI, локальный vLLM.
 
-🪶 **Ultra-Lightweight**: Just ~4,000 lines of code — 99% smaller than Clawdbot - core functionality.
+---
 
-🔬 **Research-Ready**: Clean, readable code that's easy to understand, modify, and extend for research.
+## Текущий функционал
 
-⚡️ **Lightning Fast**: Minimal footprint means faster startup, lower resource usage, and quicker iterations.
+| Возможность | Описание |
+|-------------|----------|
+| **Чат в Telegram** | Личка и группы: ответы на сообщения, reply под сообщение. |
+| **Триггеры в группах** | Реагирует на «клоп», «clopbot», «бро», @упоминание бота или reply на его сообщение. |
+| **Inline-режим** | В любом чате: `@cloptbot_bot запрос` — быстрый ответ с поиском (Brave или Gemini Google Search). Только для админов. |
+| **Голосовые** | По запросу («ответь голосовым», «голосом») отправляет голосовое (Edge TTS, русский, скорость 1.2x). |
+| **Поиск** | Brave Search (если есть API key) или встроенный поиск Gemini. |
+| **Напоминания (Cron)** | «Напомни через 5 минут …», «напомни вечером @user сделать …» — бот пришлёт сообщение в указанное время в ЛС или чат. |
+| **Канал** | Посты канала авто-приходят в чат обсуждений — бот пишет **комментарий под пост** (feedback), а не в сам канал. Сообщения «от имени канала» в чате требуют триггер. |
+| **Картинки** | Анализ по явному запросу («что на картинке?», «опиши фото»). Изображения сжимаются перед отправкой в LLM. |
+| **Защита** | В личке — whitelist по user ID (`allowFrom`). В группах/чатах — whitelist по chat ID (`allowChats`): бот отвечает только в разрешённых чатах. |
+| **Реакции** | Ставит 👀 на сообщение, когда начинает обработку. |
+| **Память и контекст** | Сессии по chat_id, ограниченная история (10 сообщений / 8K символов), инструменты памяти и импорта истории канала (`/init`). |
 
-💎 **Easy-to-Use**: One-click to depoly and you're ready to go.
+---
 
-## 🏗️ Architecture
+## Что доработано (относительно nanobot)
 
-<p align="center">
-  <img src="nanobot_arch.png" alt="nanobot architecture" width="800">
-</p>
+- **Telegram**: триггеры (клоп/clopbot/бро/@/reply), разделение личка/группа/канал.
+- **Inline-режим**: ответ в выпадающем меню с поиском (Brave или Gemini), только для админов.
+- **Cron-напоминания**: «через N минут/часов», «вечером», «завтра» и т.д., доставка в нужный chat.
+- **Голос**: Edge TTS, русский голос, скорость 1.2x, по явной просьбе.
+- **Картинки**: только по явному запросу; сжатие (Pillow) перед отправкой в LLM.
+- **Канал**: ответ только на реальные посты (auto-forward) в чат обсуждений комментарием; запись от имени канала в чате без триггера игнорируется.
+- **Whitelist чатов**: `allowChats` — список разрешённых chat_id для групп/супергрупп.
+- **Лимиты контекста**: 10 сообщений, 8K символов истории, чтобы реже таймауты.
+- **Реакции**: 👀 на сообщение при старте обработки.
+- **Модель по умолчанию**: заточен под Gemini (можно `gemini-1.5-flash` в конфиге).
 
-## ✨ Features
+---
 
-<table align="center">
-  <tr align="center">
-    <th><p align="center">📈 24/7 Real-Time Market Analysis</p></th>
-    <th><p align="center">🚀 Full-Stack Software Engineer</p></th>
-    <th><p align="center">📅 Smart Daily Routine Manager</p></th>
-    <th><p align="center">📚 Personal Knowledge Assistant</p></th>
-  </tr>
-  <tr>
-    <td align="center"><p align="center"><img src="case/search.gif" width="180" height="400"></p></td>
-    <td align="center"><p align="center"><img src="case/code.gif" width="180" height="400"></p></td>
-    <td align="center"><p align="center"><img src="case/scedule.gif" width="180" height="400"></p></td>
-    <td align="center"><p align="center"><img src="case/memory.gif" width="180" height="400"></p></td>
-  </tr>
-  <tr>
-    <td align="center">Discovery • Insights • Trends</td>
-    <td align="center">Develop • Deploy • Scale</td>
-    <td align="center">Schedule • Automate • Organize</td>
-    <td align="center">Learn • Memory • Reasoning</td>
-  </tr>
-</table>
+## Quick start
 
-## 📦 Install
-
-**Install from PyPi**
+### 1. Установка
 
 ```bash
-pip install nanobot-ai
-```
-
-**Install from source** (recommended for development)
-
-```bash
-git clone https://github.com/HKUDS/nanobot.git
-cd nanobot
+git clone <your-clopbot-repo>
+cd gigabot
 pip install -e .
 ```
 
-**Install with uv**
+(Или установка из PyPI `nanobot-ai` и затем копирование/правка конфига под Clopbot.)
 
-```bash
-uv venv
-source .venv/bin/activate
-uv pip install nanobot-ai
-```
-
-## 🚀 Quick Start
-
-> [!TIP]
-> Set your API key in `~/.nanobot/config.json`.
-> Get API keys: [OpenRouter](https://openrouter.ai/keys) (LLM) · [Brave Search](https://brave.com/search/api/) (optional, for web search)
-> You can also change the model to `minimax/minimax-m2` for lower cost.
-
-**1. Initialize**
+### 2. Первый запуск и конфиг
 
 ```bash
 nanobot onboard
 ```
 
-**2. Configure** (`~/.nanobot/config.json`)
-
-```json
-{
-  "providers": {
-    "openrouter": {
-      "apiKey": "sk-or-v1-xxx"
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": "anthropic/claude-opus-4-5"
-    }
-  },
-  "webSearch": {
-    "apiKey": "BSA-xxx"
-  }
-}
-```
-
-
-**3. Chat**
-
-```bash
-nanobot agent -m "What is 2+2?"
-```
-
-That's it! You have a working AI assistant in 2 minutes.
-
-## 🖥️ Local Models (vLLM)
-
-Run nanobot with your own local models using vLLM or any OpenAI-compatible server.
-
-**1. Start your vLLM server**
-
-```bash
-vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
-```
-
-**2. Configure** (`~/.nanobot/config.json`)
-
-```json
-{
-  "providers": {
-    "vllm": {
-      "apiKey": "dummy",
-      "apiBase": "http://localhost:8000/v1"
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": "meta-llama/Llama-3.1-8B-Instruct"
-    }
-  }
-}
-```
-
-**3. Chat**
-
-```bash
-nanobot agent -m "Hello from my local LLM!"
-```
-
-> [!TIP]
-> The `apiKey` can be any non-empty string for local servers that don't require authentication.
-
-## 💬 Chat Apps
-
-Talk to your nanobot through Telegram or WhatsApp — anytime, anywhere.
-
-| Channel | Setup |
-|---------|-------|
-| **Telegram** | Easy (just a token) |
-| **WhatsApp** | Medium (scan QR) |
-
-<details>
-<summary><b>Telegram</b> (Recommended)</summary>
-
-**1. Create a bot**
-- Open Telegram, search `@BotFather`
-- Send `/newbot`, follow prompts
-- Copy the token
-
-**2. Configure**
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "token": "YOUR_BOT_TOKEN",
-      "allowFrom": ["YOUR_USER_ID"]
-    }
-  }
-}
-```
-
-> Get your user ID from `@userinfobot` on Telegram.
-
-**3. Run**
-
-```bash
-nanobot gateway
-```
-
-</details>
-
-<details>
-<summary><b>WhatsApp</b></summary>
-
-Requires **Node.js ≥18**.
-
-**1. Link device**
-
-```bash
-nanobot channels login
-# Scan QR with WhatsApp → Settings → Linked Devices
-```
-
-**2. Configure**
-
-```json
-{
-  "channels": {
-    "whatsapp": {
-      "enabled": true,
-      "allowFrom": ["+1234567890"]
-    }
-  }
-}
-```
-
-**3. Run** (two terminals)
-
-```bash
-# Terminal 1
-nanobot channels login
-
-# Terminal 2
-nanobot gateway
-```
-
-</details>
-
-## ⚙️ Configuration
-
-<details>
-<summary><b>Full config example</b></summary>
+Отредактируй `~/.nanobot/config.json`:
 
 ```json
 {
   "agents": {
     "defaults": {
-      "model": "anthropic/claude-opus-4-5"
+      "model": "gemini-1.5-flash",
+      "maxTokens": 8192,
+      "temperature": 0.7
     }
   },
   "providers": {
-    "openrouter": {
-      "apiKey": "sk-or-v1-xxx"
+    "gemini": {
+      "apiKey": "YOUR_GEMINI_API_KEY"
     }
   },
   "channels": {
     "telegram": {
       "enabled": true,
-      "token": "123456:ABC...",
-      "allowFrom": ["123456789"]
-    },
-    "whatsapp": {
-      "enabled": false
+      "token": "YOUR_BOT_TOKEN",
+      "allowFrom": ["YOUR_TELEGRAM_USER_ID"],
+      "allowChats": ["-1003747503293", "-1002726928590"]
     }
   },
   "tools": {
     "web": {
       "search": {
-        "apiKey": "BSA..."
+        "apiKey": ""
       }
     }
   }
 }
 ```
 
-</details>
+- **allowFrom** — кто может писать в личку (user ID).
+- **allowChats** — в каких группах/чатах бот отвечает (chat_id). Пустой = отвечает везде.
 
-## CLI Reference
+Узнать свой user ID: например, @userinfobot. Chat ID группы — из логов при сообщении в группе: `Received message in chat_id=-1234567890`.
 
-| Command | Description |
-|---------|-------------|
-| `nanobot onboard` | Initialize config & workspace |
-| `nanobot agent -m "..."` | Chat with the agent |
-| `nanobot agent` | Interactive chat mode |
-| `nanobot gateway` | Start the gateway |
-| `nanobot status` | Show status |
-| `nanobot channels login` | Link WhatsApp (scan QR) |
-| `nanobot channels status` | Show channel status |
-
-<details>
-<summary><b>Scheduled Tasks (Cron)</b></summary>
+### 3. Запуск бота
 
 ```bash
-# Add a job
-nanobot cron add --name "daily" --message "Good morning!" --cron "0 9 * * *"
-nanobot cron add --name "hourly" --message "Check status" --every 3600
-
-# List jobs
-nanobot cron list
-
-# Remove a job
-nanobot cron remove <job_id>
+nanobot gateway
 ```
 
-</details>
+Бот подключается к Telegram и слушает сообщения.
 
-## 📁 Project Structure
+### 4. Включение Inline в BotFather
 
-```
-nanobot/
-├── agent/          # 🧠 Core agent logic
-│   ├── loop.py     #    Agent loop (LLM ↔ tool execution)
-│   ├── context.py  #    Prompt builder
-│   ├── memory.py   #    Persistent memory
-│   ├── skills.py   #    Skills loader
-│   ├── subagent.py #    Background task execution
-│   └── tools/      #    Built-in tools (incl. spawn)
-├── skills/         # 🎯 Bundled skills (github, weather, tmux...)
-├── channels/       # 📱 WhatsApp integration
-├── bus/            # 🚌 Message routing
-├── cron/           # ⏰ Scheduled tasks
-├── heartbeat/      # 💓 Proactive wake-up
-├── providers/      # 🤖 LLM providers (OpenRouter, etc.)
-├── session/        # 💬 Conversation sessions
-├── config/         # ⚙️ Configuration
-└── cli/            # 🖥️ Commands
-```
-
-## 🤝 Contribute & Roadmap
-
-PRs welcome! The codebase is intentionally small and readable. 🤗
-
-**Roadmap** — Pick an item and [open a PR](https://github.com/HKUDS/nanobot/pulls)!
-
-- [ ] **Multi-modal** — See and hear (images, voice, video)
-- [ ] **Long-term memory** — Never forget important context
-- [ ] **Better reasoning** — Multi-step planning and reflection
-- [ ] **More integrations** — Discord, Slack, email, calendar
-- [ ] **Self-improvement** — Learn from feedback and mistakes
-
-### Contributors
-
-<a href="https://github.com/HKUDS/nanobot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=HKUDS/nanobot" />
-</a>
+В Telegram: @BotFather → твой бот → **Bot Settings** → **Inline Mode** → **Turn on**.
 
 ---
 
-## ⭐ Star History
+## Примеры взаимодействия
 
-<div align="center">
-  <a href="https://star-history.com/#HKUDS/nanobot&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HKUDS/nanobot&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HKUDS/nanobot&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=HKUDS/nanobot&type=Date" style="border-radius: 15px; box-shadow: 0 0 30px rgba(0, 217, 255, 0.3);" />
-    </picture>
-  </a>
-</div>
+### Личка
 
-<p align="center">
-  <em> Thanks for visiting ✨ nanobot!</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.nanobot&style=for-the-badge&color=00d4ff" alt="Views">
-</p>
+- «Привет» — обычный ответ.
+- «Что на картинке?» + фото — анализ изображения (после сжатия).
+- «Ответь голосовым: расскажи анекдот» — голосовое сообщение.
+- «Напомни через 10 минут проверить деплой» — через 10 минут бот пришлёт напоминание в этот чат.
+
+### Группа (если chat_id в `allowChats`)
+
+- **С триггером:** «Клоп что мы делаем вкратце» / «Clopbot review» / «бро как дела» / ответ (reply) на сообщение бота.
+- **Без триггера:** «просто текст» — бот не отвечает.
+- «Клоп напомни завтра @username выпустить подкаст» — напоминание с упоминанием в указанный чат.
+
+### Inline (в любом чате)
+
+- Ввести в поле сообщения: `@cloptbot_bot кто такой Ulysse` — в выпадающем списке появится ответ с поиском (если настроен Brave или Gemini Search). Доступ только для user ID из `allowFrom`.
+
+### Канал с чатом обсуждений
+
+- Ты публикуешь **пост в канал** → он авто-пересылается в чат обсуждений → бот пишет **комментарий под этим постом** (краткий разбор/feedback).
+- Ты пишешь **в чате от имени канала** (без триггера) → бот не отвечает. С триггером («клоп …») — отвечает как в обычной группе.
+
+### Команды
+
+- **/start** — приветствие.
+- **/init** — загрузка истории канала (прикрепляешь JSON экспорта) для контекста и стиля.
+
+---
+
+## Конфиг (основное)
+
+| Поле | Описание |
+|------|----------|
+| `agents.defaults.model` | Модель LLM, например `gemini-1.5-flash`. |
+| `providers.gemini.apiKey` | Ключ Gemini. |
+| `channels.telegram.token` | Токен бота от BotFather. |
+| `channels.telegram.allowFrom` | Список user ID для лички (и inline). |
+| `channels.telegram.allowChats` | Список chat_id групп, где бот отвечает. Пустой = все чаты. |
+| `tools.web.search.apiKey` | Brave Search (опционально, для быстрого inline). |
+
+Файл: `~/.nanobot/config.json`. После изменений перезапусти `nanobot gateway`.
+
+---
+
+## CLI
+
+| Команда | Описание |
+|---------|----------|
+| `nanobot onboard` | Создать конфиг и workspace |
+| `nanobot gateway` | Запустить бота (Telegram + cron + heartbeat) |
+| `nanobot agent -m "…"` | Разовый запрос к агенту |
+| `nanobot agent` | Интерактивный чат в терминале |
+| `nanobot status` | Статус конфига и ключей |
+| `nanobot cron list` | Список напоминаний |
+| `nanobot cron add --name "…" --message "…" --every 3600` | Добавить периодическую задачу |
+
+---
+
+## Структура проекта (кратко)
+
+```
+nanobot/
+├── agent/           # Агент: loop, context, память, инструменты
+├── channels/        # Telegram (сообщения, inline, голос, реакции)
+├── cron/            # Напоминания и отложенные задачи
+├── providers/       # LLM (LiteLLM: Gemini, OpenRouter, …)
+├── session/         # Сессии по chat_id, лимиты истории
+├── config/          # Схема и загрузка конфига
+└── cli/             # Команды (gateway, agent, cron, …)
+```
+
+---
+
+## Рекомендации
+
+- **Модель:** для стабильной работы лучше `gemini-1.5-flash`; превью-модели часто дают таймауты.
+- **Inline:** для быстрого поиска в inline желательно указать Brave API key в `tools.web.search.apiKey`.
+- **Группы:** чтобы бот не отвечал в чужих чатах, заполни `allowChats` только своими chat_id.
+
+---
+
+*Clopbot — форк nanobot. Исходный проект: [nanobot](https://github.com/HKUDS/nanobot).*

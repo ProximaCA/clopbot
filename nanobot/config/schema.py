@@ -16,7 +16,8 @@ class TelegramConfig(BaseModel):
     """Telegram channel configuration."""
     enabled: bool = False
     token: str = ""  # Bot token from @BotFather
-    allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs or usernames
+    allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs (private chat)
+    allow_chats: list[str] = Field(default_factory=list)  # Allowed chat IDs (groups/channels where bot may respond)
 
 
 class ChannelsConfig(BaseModel):
@@ -91,7 +92,31 @@ class Config(BaseSettings):
         return Path(self.agents.defaults.workspace).expanduser()
     
     def get_api_key(self) -> str | None:
-        """Get API key in priority order: OpenRouter > Anthropic > OpenAI > Gemini > Zhipu > vLLM."""
+        """
+        Get API key based on the configured model.
+        
+        If no specific match found, falls back to priority order.
+        """
+        model = self.agents.defaults.model.lower()
+        
+        # 1. Check for model-specific keys
+        if "gemini" in model or "google" in model:
+            if self.providers.gemini.api_key:
+                return self.providers.gemini.api_key
+                
+        if "claude" in model or "anthropic" in model:
+            if self.providers.anthropic.api_key:
+                return self.providers.anthropic.api_key
+                
+        if "gpt" in model or "openai" in model:
+            if self.providers.openai.api_key:
+                return self.providers.openai.api_key
+        
+        if "glm" in model or "zhipu" in model:
+            if self.providers.zhipu.api_key:
+                return self.providers.zhipu.api_key
+
+        # 2. Fallback to priority order (existing logic)
         return (
             self.providers.openrouter.api_key or
             self.providers.anthropic.api_key or

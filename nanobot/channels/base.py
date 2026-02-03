@@ -66,19 +66,26 @@ class BaseChannel(ABC):
         Returns:
             True if allowed, False otherwise.
         """
+        from loguru import logger
+        
         allow_list = getattr(self.config, "allow_from", [])
         
         # If no allow list, allow everyone
         if not allow_list:
+            logger.debug(f"No allow list configured, allowing sender: {sender_id}")
             return True
         
         sender_str = str(sender_id)
         if sender_str in allow_list:
+            logger.debug(f"Sender {sender_id} allowed (exact match)")
             return True
         if "|" in sender_str:
             for part in sender_str.split("|"):
                 if part and part in allow_list:
+                    logger.debug(f"Sender {sender_id} allowed (part '{part}' matched)")
                     return True
+        
+        logger.warning(f"Sender {sender_id} BLOCKED by allowFrom filter. Allow list: {allow_list}")
         return False
     
     async def _handle_message(
@@ -87,7 +94,8 @@ class BaseChannel(ABC):
         chat_id: str,
         content: str,
         media: list[str] | None = None,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
+        skip_allow_check: bool = False
     ) -> None:
         """
         Handle an incoming message from the chat platform.
@@ -100,9 +108,19 @@ class BaseChannel(ABC):
             content: Message text content.
             media: Optional list of media URLs.
             metadata: Optional channel-specific metadata.
+            skip_allow_check: If True, skip allowFrom check (e.g. for group chats).
         """
-        if not self.is_allowed(sender_id):
+        from loguru import logger
+        
+        # In group chats, allow everyone. In private chats, check allowFrom.
+        if not skip_allow_check and not self.is_allowed(sender_id):
+            logger.warning(f"Message from {sender_id} blocked by allowFrom filter (private chat)")
             return
+        
+        if skip_allow_check:
+            logger.debug(f"Skipping allowFrom check for {sender_id} (group chat)")
+        
+        logger.info(f"Publishing message to bus: sender={sender_id}, chat={chat_id}, content_preview={content[:50]}...")
         
         msg = InboundMessage(
             channel=self.name,
@@ -114,6 +132,7 @@ class BaseChannel(ABC):
         )
         
         await self.bus.publish_inbound(msg)
+        logger.debug(f"Message published to bus successfully")
     
     @property
     def is_running(self) -> bool:

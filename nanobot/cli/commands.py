@@ -193,35 +193,57 @@ def gateway(
         default_model=config.agents.defaults.model
     )
     
-    # Create agent
+    # Get admin IDs from Telegram config (if available)
+    admin_ids = []
+    if hasattr(config.channels, 'telegram') and hasattr(config.channels.telegram, 'allow_from'):
+        admin_ids = config.channels.telegram.allow_from or []
+    
+    # Create cron service first (needed by agent for reminders)
+    cron_store_path = get_data_dir() / "cron" / "jobs.json"
+    
+    async def on_cron_job_placeholder(job: CronJob) -> str | None:
+        """Placeholder for cron job execution (will be replaced after agent creation)."""
+        return None
+    
+    cron = CronService(cron_store_path, on_job=on_cron_job_placeholder)
+    
+    # Create agent (with cron service for reminders)
     agent = AgentLoop(
         bus=bus,
         provider=provider,
         workspace=config.workspace_path,
         model=config.agents.defaults.model,
         max_iterations=config.agents.defaults.max_tool_iterations,
-        brave_api_key=config.tools.web.search.api_key or None
+        brave_api_key=config.tools.web.search.api_key or None,
+        admin_ids=admin_ids,
+        cron_service=cron
     )
     
-    # Create cron service
+    # Update cron service with actual job handler (now that agent exists)
     async def on_cron_job(job: CronJob) -> str | None:
         """Execute a cron job through the agent."""
+        console.print(f"[dim]Executing job {job.id} (deliver={job.payload.deliver}, to={job.payload.to})[/dim]")
+        
+        # For reminders with deliver=True, send directly to channel
+        if job.payload.deliver and job.payload.to:
+            from nanobot.bus.events import OutboundMessage
+            console.print(f"[dim]Sending reminder to {job.payload.to} via {job.payload.channel}[/dim]")
+            await bus.publish_outbound(OutboundMessage(
+                channel=job.payload.channel or "telegram",
+                chat_id=job.payload.to,
+                content=job.payload.message or ""
+            ))
+            return "Reminder sent"
+        
+        # For other jobs, process through agent
         response = await agent.process_direct(
             job.payload.message,
             session_key=f"cron:{job.id}"
         )
-        # Optionally deliver to channel
-        if job.payload.deliver and job.payload.to:
-            from nanobot.bus.events import OutboundMessage
-            await bus.publish_outbound(OutboundMessage(
-                channel=job.payload.channel or "whatsapp",
-                chat_id=job.payload.to,
-                content=response or ""
-            ))
         return response
     
-    cron_store_path = get_data_dir() / "cron" / "jobs.json"
-    cron = CronService(cron_store_path, on_job=on_cron_job)
+    # Replace placeholder handler with actual one
+    cron.on_job = on_cron_job
     
     # Create heartbeat service
     async def on_heartbeat(prompt: str) -> str:
@@ -301,11 +323,17 @@ def agent(
         default_model=config.agents.defaults.model
     )
     
+    # Get admin IDs from Telegram config (if available)
+    admin_ids = []
+    if hasattr(config.channels, 'telegram') and hasattr(config.channels.telegram, 'allow_from'):
+        admin_ids = config.channels.telegram.allow_from or []
+    
     agent_loop = AgentLoop(
         bus=bus,
         provider=provider,
         workspace=config.workspace_path,
-        brave_api_key=config.tools.web.search.api_key or None
+        brave_api_key=config.tools.web.search.api_key or None,
+        admin_ids=admin_ids
     )
     
     if message:
